@@ -121,6 +121,8 @@ function wrapToolHandler<T>(handler: (args: T) => Promise<unknown>) {
   };
 }
 
+export const SERVER_VERSION = "1.0.1";
+
 /**
  * 组装并配置 MCP Server 实例
  *
@@ -131,7 +133,7 @@ function wrapToolHandler<T>(handler: (args: T) => Promise<unknown>) {
 export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S3Client): McpServer {
   const server = new McpServer({
     name: "mcp-server-s3",
-    version: "1.0.0",
+    version: SERVER_VERSION,
   });
 
   const client = customClient ?? getS3Client(config);
@@ -409,7 +411,7 @@ export async function runServer(
       process.exit(0);
     }
     if (isVersion) {
-      process.stdout.write("1.0.0\n");
+      process.stdout.write(`${SERVER_VERSION}\n`);
       process.exit(0);
     }
     config = resolvedConfig;
