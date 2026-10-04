@@ -58,7 +58,13 @@ jobs:
           OUTPUT: CHANGELOG_RELEASE.md
 
       - name: 发布至 NPM 公共注册表 (带 SLSA Provenance 供应链防伪凭据)
-        run: npm publish --access public --provenance
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          if npm view "@atengk/mcp-server-s3@${CURRENT_VERSION}" version > /dev/null 2>&1; then
+            echo "版本 ${CURRENT_VERSION} 已存在于 NPM 注册表，自动跳过重复发布"
+          else
+            npm publish --access public --provenance
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

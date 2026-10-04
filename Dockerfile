@@ -5,11 +5,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm 包管理器
-RUN npm install -g pnpm@latest
+# 安装 pnpm 包管理器 (锁定 pnpm 9 匹配 lockfileVersion 9.0)
+RUN npm install -g pnpm@9
 
-# 依赖清单优先拷贝与缓存
-COPY package.json pnpm-lock.yaml* ./
+# 依赖清单与配置文件优先拷贝与缓存
+COPY package.json pnpm-lock.yaml* .npmrc* ./
 
 # 安装完整开发依赖 (含 tsup, typescript)
 RUN pnpm install --frozen-lockfile || pnpm install
