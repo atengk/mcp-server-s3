@@ -38,7 +38,6 @@ const BINARY_MIME_PREFIXES = [
   "audio/",
   "application/zip",
   "application/pdf",
-  "application/octet-stream",
   "application/x-gzip",
   "application/x-tar",
   "application/vnd.",

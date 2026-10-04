@@ -168,6 +168,7 @@ export function parseEnv(env: NodeJS.ProcessEnv = process.env): AppConfig {
     3600,
     "MCP_S3_PRESIGNED_EXPIRES"
   );
+  const apiKey = getEnvValue(env, "MCP_S3_API_KEY", ["MCP_S3_AUTH_TOKEN", "S3_API_KEY"]);
 
   const rawConfig: AppConfig = {
     transport,
@@ -184,6 +185,7 @@ export function parseEnv(env: NodeJS.ProcessEnv = process.env): AppConfig {
     allowedLocalDir,
     maxReadBytes,
     presignedExpires,
+    apiKey,
   };
 
   // 通过 Zod 强类型 Schema 进行终态运行时断言校验
@@ -201,6 +203,7 @@ export function maskSensitiveConfig(config: AppConfig): AppConfig {
     ...config,
     secretAccessKey: config.secretAccessKey ? "***" : undefined,
     sessionToken: config.sessionToken ? "***" : undefined,
+    apiKey: config.apiKey ? "***" : undefined,
   };
 }
 

@@ -399,7 +399,8 @@ export async function runServer(
     const sseInstance = await startSSEServer(
       () => createMCPServer(config),
       config.serverHost,
-      config.serverPort
+      config.serverPort,
+      config.apiKey
     );
     process.stderr.write(
       `[mcp-server-s3] HTTP SSE 传输服务已启动，监听地址: http://${config.serverHost}:${sseInstance.port}\n` +

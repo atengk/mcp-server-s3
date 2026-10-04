@@ -15,6 +15,7 @@ import {
   PutObjectCommand,
   type S3Client,
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import type { SandboxGuard } from "../security/sandbox-guard.js";
 import { BusinessError } from "../types/security.js";
 import { resolveBucket } from "./object-service.js";
@@ -23,6 +24,21 @@ import type {
   PutObjectTextInput,
   UploadFileInput,
 } from "../types/tools.js";
+
+/**
+ * 自动触发分段上传的单文件大小阈值 (32MB)
+ */
+export const MULTIPART_UPLOAD_THRESHOLD_BYTES = 32 * 1024 * 1024;
+
+/**
+ * 分段上传单分片大小 (8MB)
+ */
+export const MULTIPART_PART_SIZE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * 分段上传并发队列大小
+ */
+export const MULTIPART_QUEUE_SIZE = 4;
 
 /**
  * 文本直接写入或覆盖对象
@@ -59,7 +75,7 @@ export async function putObjectText(
 }
 
 /**
- * 本地文件流式上传至 S3 (受工作区路径沙箱守卫严格约束)
+ * 本地文件流式上传至 S3 (受工作区路径沙箱守卫严格约束，支持大文件透明分段上传)
  *
  * @param client S3 客户端实例
  * @param params 上传参数
@@ -96,15 +112,33 @@ export async function uploadFile(
   });
 
   try {
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: params.key,
-        Body: readStream,
-        ContentLength: stats.size,
-        ContentType: params.content_type,
-      })
-    );
+    // 超过 32MB 时自动升级为分段并发上传 (Multipart Upload)，低于阈值采用极速单次流式 PutObject
+    if (stats.size > MULTIPART_UPLOAD_THRESHOLD_BYTES) {
+      const parallelUpload = new Upload({
+        client,
+        params: {
+          Bucket: bucket,
+          Key: params.key,
+          Body: readStream,
+          ContentType: params.content_type,
+        },
+        partSize: MULTIPART_PART_SIZE_BYTES,
+        queueSize: MULTIPART_QUEUE_SIZE,
+        leavePartsOnError: false,
+      });
+
+      await parallelUpload.done();
+    } else {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: params.key,
+          Body: readStream,
+          ContentLength: stats.size,
+          ContentType: params.content_type,
+        })
+      );
+    }
 
     if (streamError) {
       throw new BusinessError("STREAM_READ_ERROR", `读取本地文件发生错误: ${(streamError as Error).message}`);

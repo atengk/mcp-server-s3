@@ -87,3 +87,14 @@ _Avoid_: Status Page, Ping Route
 **Scoped Package (作用域包)**:
 专指在 NPM 官方公共注册表下以 `@atengk/` 命名空间为前缀的唯一发布包名（`@atengk/mcp-server-s3`），确立组织唯一所有权并防范供应链混淆。
 _Avoid_: Global Unscoped Package (无作用域全局包), Bare Package
+
+### 大对象传输与传输层安全 (Large Objects & Transport Security)
+
+**Multipart Upload (分段上传)**:
+将大对象切分为多个独立数据块（Parts）流式或并发上传至存储桶，并在全部传输完成后由底层对象存储原子化合并为单一对象的容灾上传机制。
+_Avoid_: Chunked Transfer (分块传输), Split File (文件切分), File Slice
+
+**Bearer Token Auth (承载令牌鉴权)**:
+在 `sse` 传输模式下，通过请求头 `Authorization: Bearer <token>` 或备用 URL 查询参数验证客户端合法性并保护端点免受非授权调用的安全访问门禁机制。
+_Avoid_: API Secret, Password Check, Login Key
+

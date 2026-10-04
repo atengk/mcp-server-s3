@@ -5,6 +5,7 @@
  * @since 2026-10-04
  */
 
+import { Readable } from "node:stream";
 import {
   GetObjectCommand,
   HeadObjectCommand,
@@ -155,6 +156,50 @@ describe("对象检索与内容分块直读服务测试 (object-service)", () =>
       expect(result.content).toBe("");
       expect(result.warning).toContain("二进制文件");
       expect(result.warning).toContain("image/png");
+    });
+
+    it("Content-Type 为 application/octet-stream 但为纯文本时通过 Magic Bytes 深度探测放行直读", async () => {
+      const textContent = "config_param=123\nfeature_enabled=true\n";
+      const readable = new Readable();
+      readable.push(Buffer.from(textContent));
+      readable.push(null);
+
+      s3Mock.on(GetObjectCommand).resolves({
+        ContentLength: textContent.length,
+        ContentType: "application/octet-stream",
+        Body: readable as any,
+      });
+
+      const result = await readObjectText(
+        client,
+        { bucket: "test-bucket", key: "app.conf" },
+        truncator
+      );
+      expect(result.truncated).toBe(false);
+      expect(result.content).toBe(textContent);
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("Content-Type 为 application/octet-stream 且包含空字节 Null Byte 时深度探测拦截", async () => {
+      const binaryBuf = Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01, 0x01]); // ELF binary with \0
+      const readable = new Readable();
+      readable.push(binaryBuf);
+      readable.push(null);
+
+      s3Mock.on(GetObjectCommand).resolves({
+        ContentLength: binaryBuf.length,
+        ContentType: "application/octet-stream",
+        Body: readable as any,
+      });
+
+      const result = await readObjectText(
+        client,
+        { bucket: "test-bucket", key: "binary_app" },
+        truncator
+      );
+      expect(result.truncated).toBe(true);
+      expect(result.content).toBe("");
+      expect(result.warning).toContain("二进制数据");
     });
   });
 

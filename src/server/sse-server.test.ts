@@ -34,10 +34,11 @@ describe("HTTP SSE 传输服务与健康检查探针测试 (sse-server)", () => 
     }
   });
 
-  it("GET /health 能够正确返回 200 状态与健康探针元数据", async () => {
+  it("GET /health 能够正确返回 200 状态与健康探针元数据并附加 CORS 响应头", async () => {
     const response = await fetch(`${baseUrl}/health`);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
 
     const data = (await response.json()) as {
       status: string;
@@ -49,6 +50,15 @@ describe("HTTP SSE 传输服务与健康检查探针测试 (sse-server)", () => 
     expect(data.service).toBe("mcp-server-s3");
     expect(typeof data.uptime).toBe("number");
     expect(data.activeConnections).toBe(0);
+  });
+
+  it("OPTIONS 预检请求应正确返回 204 状态与 CORS 配置头", async () => {
+    const response = await fetch(`${baseUrl}/sse`, {
+      method: "OPTIONS",
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-methods")).toContain("GET");
   });
 
   it("访问未知路径应返回 404 状态码", async () => {
@@ -113,5 +123,90 @@ describe("HTTP SSE 传输服务与健康检查探针测试 (sse-server)", () => 
       clearTimeout(t1);
       clearTimeout(t2);
     }
+  });
+
+  describe("API Key / Bearer Token 访问控制门禁测试", () => {
+    let authServer: SSEServerInstance;
+    let authBaseUrl: string;
+    const SECRET_KEY = "test-secret-token-888";
+
+    beforeEach(async () => {
+      authServer = await startSSEServer(
+        () =>
+          new McpServer({
+            name: "test-auth-s3",
+            version: "1.0.0",
+          }),
+        "127.0.0.1",
+        0,
+        SECRET_KEY
+      );
+      authBaseUrl = `http://127.0.0.1:${authServer.port}`;
+    });
+
+    afterEach(async () => {
+      await authServer.close();
+    });
+
+    it("开启鉴权时 GET /health 探针依然公开可达 (返回 200)", async () => {
+      const res = await fetch(`${authBaseUrl}/health`);
+      expect(res.status).toBe(200);
+    });
+
+    it("未提供 Token 访问 /sse 应被拦截为 401 Unauthorized", async () => {
+      const res = await fetch(`${authBaseUrl}/sse`);
+      expect(res.status).toBe(401);
+      const data = (await res.json()) as { error: { message: string } };
+      expect(data.error.message).toContain("Unauthorized");
+    });
+
+    it("提供错误 Token 访问 /message 应被拦截为 401", async () => {
+      const res = await fetch(`${authBaseUrl}/message?sessionId=test`, {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer wrong-key",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it("通过 Authorization Header 传递合法 Bearer Token 能成功建立 /sse 连接", async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1000);
+
+      try {
+        const res = await fetch(`${authBaseUrl}/sse`, {
+          headers: {
+            Authorization: `Bearer ${SECRET_KEY}`,
+          },
+          signal: controller.signal,
+        });
+        expect(res.status).toBe(200);
+        expect(res.headers.get("content-type")).toContain("text/event-stream");
+      } catch (err: unknown) {
+        if ((err as Error).name !== "AbortError") throw err;
+      } finally {
+        clearTimeout(timeout);
+      }
+    });
+
+    it("通过 URL 查询参数 ?token= 传递合法令牌能成功建立 /sse 连接", async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1000);
+
+      try {
+        const res = await fetch(`${authBaseUrl}/sse?token=${SECRET_KEY}`, {
+          signal: controller.signal,
+        });
+        expect(res.status).toBe(200);
+        expect(res.headers.get("content-type")).toContain("text/event-stream");
+      } catch (err: unknown) {
+        if ((err as Error).name !== "AbortError") throw err;
+      } finally {
+        clearTimeout(timeout);
+      }
+    });
   });
 });

@@ -52,5 +52,6 @@ export const AppConfigSchema = z.object({
   allowedLocalDir: z.string().min(1),
   maxReadBytes: z.number().int().positive(),
   presignedExpires: z.number().int().positive(),
+  apiKey: z.string().optional(),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;

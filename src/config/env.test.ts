@@ -268,5 +268,15 @@ describe("env 配置解析中枢测试", () => {
       const clientConfig = getS3ClientConfig(appConfig);
       expect(clientConfig.credentials).toBeUndefined();
     });
+
+    it("正确解析并脱敏 apiKey 访问令牌", () => {
+      const appConfig = parseEnv({
+        MCP_S3_API_KEY: "secret-token-123456",
+      });
+      expect(appConfig.apiKey).toBe("secret-token-123456");
+
+      const masked = maskSensitiveConfig(appConfig);
+      expect(masked.apiKey).toBe("***");
+    });
   });
 });
