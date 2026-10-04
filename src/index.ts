@@ -9,6 +9,7 @@ import { type S3Client } from "@aws-sdk/client-s3";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import dotenv from "dotenv";
+import { printHelp, resolveConfigWithCli } from "./config/cli.js";
 import { parseEnv } from "./config/env.js";
 import { getS3Client } from "./connection/s3-client-factory.js";
 import { ContentTruncator } from "./security/content-truncator.js";
@@ -384,16 +385,35 @@ export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S
   return server;
 }
 
+export { printHelp, resolveConfigWithCli } from "./config/cli.js";
+
 /**
- * 启动 MCP 传输服务引擎 (根据配置自动分流 Stdio 或 SSE 双模)
+ * 启动 MCP 传输服务引擎 (根据配置自动分流 Stdio 或 SSE 双模，CLI Flags 优先于环境变量)
  *
- * @param customConfig 可选覆盖应用全局配置 (未传则自动解析环境变量)
+ * @param customConfig 可选覆盖应用全局配置
+ * @param argv 可选命令行参数 (默认 process.argv.slice(2))
  * @return 运行模式元数据与关闭句柄
  */
 export async function runServer(
-  customConfig?: AppConfig
+  customConfig?: AppConfig,
+  argv?: string[]
 ): Promise<{ mode: "stdio" | "sse"; close?: () => Promise<void> }> {
-  const config = customConfig ?? parseEnv();
+  let config: AppConfig;
+
+  if (customConfig) {
+    config = customConfig;
+  } else {
+    const { config: resolvedConfig, isHelp, isVersion } = resolveConfigWithCli(argv);
+    if (isHelp) {
+      printHelp();
+      process.exit(0);
+    }
+    if (isVersion) {
+      process.stdout.write("1.0.0\n");
+      process.exit(0);
+    }
+    config = resolvedConfig;
+  }
 
   if (config.transport === "sse") {
     const sseInstance = await startSSEServer(
