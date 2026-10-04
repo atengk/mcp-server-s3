@@ -17,6 +17,7 @@ export default defineConfig({
   dts: true,
   splitting: false,
   bundle: true,
+  noExternal: [/.*/],
   banner: {
     js: "#!/usr/bin/env node",
   },

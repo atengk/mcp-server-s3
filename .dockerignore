@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github
+.gemini
+*.log
+.env
+.env.*
+coverage
+scratch
+docs

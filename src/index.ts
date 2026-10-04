@@ -67,6 +67,8 @@ import {
   UploadFileSchema,
 } from "./types/tools.js";
 
+import { startSSEServer } from "./server/sse-server.js";
+
 // 1. 初始化环境变量配置
 dotenv.config();
 
@@ -82,6 +84,7 @@ export * from "./services/transfer-service.js";
 export * from "./services/presign-service.js";
 export * from "./services/batch-service.js";
 export * from "./services/tag-service.js";
+export * from "./server/sse-server.js";
 
 /**
  * 通用工具执行函数包装器 (统一错误捕获与响应格式化，消除重复样板代码)
@@ -382,13 +385,43 @@ export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S
 }
 
 /**
- * 启动默认 Stdio 传输通道
+ * 启动 MCP 传输服务引擎 (根据配置自动分流 Stdio 或 SSE 双模)
+ *
+ * @param customConfig 可选覆盖应用全局配置 (未传则自动解析环境变量)
+ * @return 运行模式元数据与关闭句柄
  */
-export async function runServer(): Promise<void> {
-  const config = parseEnv();
+export async function runServer(
+  customConfig?: AppConfig
+): Promise<{ mode: "stdio" | "sse"; close?: () => Promise<void> }> {
+  const config = customConfig ?? parseEnv();
+
+  if (config.transport === "sse") {
+    const sseInstance = await startSSEServer(
+      () => createMCPServer(config),
+      config.serverHost,
+      config.serverPort
+    );
+    process.stderr.write(
+      `[mcp-server-s3] HTTP SSE 传输服务已启动，监听地址: http://${config.serverHost}:${sseInstance.port}\n` +
+      `  - SSE 事件流端点: http://${config.serverHost}:${sseInstance.port}/sse\n` +
+      `  - 消息交互端点: http://${config.serverHost}:${sseInstance.port}/message\n` +
+      `  - 容器就绪探针: http://${config.serverHost}:${sseInstance.port}/health\n`
+    );
+
+    const onSignal = async () => {
+      await sseInstance.close();
+      process.exit(0);
+    };
+    process.once("SIGINT", onSignal);
+    process.once("SIGTERM", onSignal);
+
+    return { mode: "sse", close: sseInstance.close };
+  }
+
   const server = createMCPServer(config);
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  return { mode: "stdio" };
 }
 
 // 主模块直接启动时执行

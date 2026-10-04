@@ -1,0 +1,58 @@
+name: Release & Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: 生产发版与软件供应链溯源流水线
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 用于创建 GitHub Release
+      id-token: write   # 必须显式声明，用于 GitHub OIDC 签署 SLSA Provenance 软件供应链溯源凭据
+
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm 包管理器
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - name: 配置 Node.js 运行环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: 完整安装项目依赖
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: 执行严格类型检查 (Typecheck)
+        run: pnpm typecheck
+
+      - name: 运行全量单元测试与安全门禁 (Tests)
+        run: pnpm test
+
+      - name: 执行生产单文件编译打包 (Build)
+        run: pnpm build
+
+      - name: 发布至 NPM 公共注册表 (带 SLSA Provenance 供应链防伪凭证)
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 创建 GitHub Release 官方版本
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.md
+          files: |
+            dist/index.js
+            dist/index.d.ts
+            dist/index.js.map
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

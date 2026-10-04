@@ -9,7 +9,7 @@ import { ListBucketsCommand, S3Client } from "@aws-sdk/client-s3";
 import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it } from "vitest";
 import { parseEnv } from "./config/env.js";
-import { createMCPServer } from "./index.js";
+import { createMCPServer, runServer } from "./index.js";
 
 const s3Mock = mockClient(S3Client);
 
@@ -45,5 +45,21 @@ describe("MCP Server 核心装配测试", () => {
     const client = new S3Client({ region: "us-east-1" });
     const server = createMCPServer(config, client);
     expect(server).toBeDefined();
+  });
+
+  it("runServer 能够根据配置以 sse 模式启动并安全关闭", async () => {
+    const config = parseEnv({
+      MCP_S3_TRANSPORT: "sse",
+      MCP_S3_SERVER_HOST: "127.0.0.1",
+      MCP_S3_SERVER_PORT: "18088",
+    });
+
+    const result = await runServer(config);
+    expect(result.mode).toBe("sse");
+    expect(typeof result.close).toBe("function");
+
+    if (result.close) {
+      await result.close();
+    }
   });
 });
