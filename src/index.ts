@@ -10,7 +10,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import dotenv from "dotenv";
 import { parseEnv } from "./config/env.js";
-import { createS3Client } from "./connection/s3-client-factory.js";
+import { getS3Client } from "./connection/s3-client-factory.js";
+import { ContentTruncator } from "./security/content-truncator.js";
+import { ReadOnlyGuard } from "./security/readonly-guard.js";
+import { SandboxGuard } from "./security/sandbox-guard.js";
 import { executeS3Ping } from "./services/probe-service.js";
 import type { AppConfig } from "./types/config.js";
 import { S3PingSchema } from "./types/tools.js";
@@ -18,10 +21,11 @@ import { S3PingSchema } from "./types/tools.js";
 // 1. 初始化环境变量配置
 dotenv.config();
 
-// 2. 导出所有核心契约、配置中枢与连接工厂
+// 2. 导出所有核心契约、配置中枢、连接工厂、安全守卫与服务
 export * from "./types/index.js";
 export * from "./config/env.js";
 export * from "./connection/s3-client-factory.js";
+export * from "./security/index.js";
 export * from "./services/probe-service.js";
 
 /**
@@ -37,25 +41,30 @@ export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S
     version: "1.0.0",
   });
 
-  const client = customClient ?? createS3Client(config);
+  const client = customClient ?? getS3Client(config);
+  const readOnlyGuard = new ReadOnlyGuard(config.readOnly);
+  const sandboxGuard = new SandboxGuard(config.allowedLocalDir);
+  const contentTruncator = new ContentTruncator({ maxBytes: config.maxReadBytes });
 
   // 注册 s3_ping 自省探针工具 (ADR-0005)
-  server.tool(
-    "s3_ping",
-    "毫秒级自检端点连通性、网络 RTT、生效 Region 与脱敏鉴权身份",
-    S3PingSchema.shape,
-    async () => {
-      const result = await executeS3Ping(client, config);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    }
-  );
+  if (readOnlyGuard.isToolAllowed("s3_ping")) {
+    server.tool(
+      "s3_ping",
+      "毫秒级自检端点连通性、网络 RTT、生效 Region 与脱敏鉴权身份",
+      S3PingSchema.shape,
+      async () => {
+        const result = await executeS3Ping(client, config);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+    );
+  }
 
   return server;
 }
