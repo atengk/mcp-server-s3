@@ -11,6 +11,8 @@ export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm"],
   target: "node20",
+  platform: "node",
+  shims: true,
   outDir: "dist",
   clean: true,
   sourcemap: true,
@@ -19,6 +21,6 @@ export default defineConfig({
   bundle: true,
   noExternal: [/.*/],
   banner: {
-    js: "#!/usr/bin/env node",
+    js: `#!/usr/bin/env node\nimport { createRequire as __cr } from "node:module";\nconst require = __cr(import.meta.url);`,
   },
 });
