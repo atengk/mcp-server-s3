@@ -121,7 +121,9 @@ function wrapToolHandler<T>(handler: (args: T) => Promise<unknown>) {
   };
 }
 
-export const SERVER_VERSION = "1.1.0";
+declare const __APP_VERSION__: string | undefined;
+
+export const SERVER_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 
 /**
  * 组装并配置 MCP Server 实例
