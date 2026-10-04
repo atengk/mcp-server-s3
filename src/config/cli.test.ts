@@ -24,7 +24,7 @@ describe("CLI 命令行参数解析器测试 (cli.ts)", () => {
   it("命令行参数应成功覆盖同名环境变量", () => {
     const args = [
       "--endpoint",
-      "http://103.236.97.210:47875",
+      "http://s3.example.com:9000",
       "--region",
       "us-east-1",
       "--access-key-id",
@@ -52,7 +52,7 @@ describe("CLI 命令行参数解析器测试 (cli.ts)", () => {
       MCP_S3_SERVER_PORT: "8000",
     });
 
-    expect(config.endpoint).toBe("http://103.236.97.210:47875");
+    expect(config.endpoint).toBe("http://s3.example.com:9000");
     expect(config.region).toBe("us-east-1");
     expect(config.accessKeyId).toBe("cli-ak");
     expect(config.secretAccessKey).toBe("cli-sk");

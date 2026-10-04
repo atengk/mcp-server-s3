@@ -49,7 +49,7 @@ export function printHelp(): void {
   npx @atengk/mcp-server-s3 [选项]
 
 通用连接选项:
-  --endpoint <url>              S3 API 兼容接入点 (如 http://103.236.97.210:47875)
+  --endpoint <url>              S3 API 兼容接入点 (如 http://s3.example.com:9000)
   --region <region>             目标地域 (默认: us-east-1)
   --access-key-id <ak>          S3 Access Key ID
   --secret-access-key <sk>      S3 Secret Access Key
