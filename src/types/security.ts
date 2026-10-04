@@ -74,3 +74,16 @@ export class SecurityError extends Error {
     this.code = code;
   }
 }
+
+/**
+ * 业务操作受控异常 (Business Error)
+ */
+export class BusinessError extends Error {
+  public readonly code: string;
+
+  public constructor(code: string, message: string) {
+    super(`[MCP-S3 业务异常] ${message}`);
+    this.name = "BusinessError";
+    this.code = code;
+  }
+}

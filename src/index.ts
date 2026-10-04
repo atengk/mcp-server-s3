@@ -13,6 +13,14 @@ import { parseEnv } from "./config/env.js";
 import { getS3Client } from "./connection/s3-client-factory.js";
 import { ContentTruncator } from "./security/content-truncator.js";
 import { ReadOnlyGuard } from "./security/readonly-guard.js";
+import { SandboxGuard } from "./security/sandbox-guard.js";
+import {
+  copyObject,
+  deleteObject,
+  deleteObjectsBatch,
+  deleteObjectsByPrefix,
+  moveObject,
+} from "./services/batch-service.js";
 import {
   createBucket,
   deleteBucket,
@@ -26,19 +34,37 @@ import {
   searchObjects,
   statObject,
 } from "./services/object-service.js";
+import { getPresignedUrl } from "./services/presign-service.js";
 import { executeS3Ping } from "./services/probe-service.js";
+import { getObjectTags, setObjectTags } from "./services/tag-service.js";
+import {
+  downloadFile,
+  putObjectText,
+  uploadFile,
+} from "./services/transfer-service.js";
 import type { AppConfig } from "./types/config.js";
 import {
+  CopyObjectSchema,
   CreateBucketSchema,
   DeleteBucketSchema,
+  DeleteObjectSchema,
+  DeleteObjectsBatchSchema,
+  DeleteObjectsByPrefixSchema,
+  DownloadFileSchema,
   GetBucketLocationSchema,
+  GetObjectTagsSchema,
+  GetPresignedUrlSchema,
   ListBucketsSchema,
   ListObjectsSchema,
+  MoveObjectSchema,
+  PutObjectTextSchema,
   ReadObjectRangeSchema,
   ReadObjectTextSchema,
   S3PingSchema,
   SearchObjectsSchema,
+  SetObjectTagsSchema,
   StatObjectSchema,
+  UploadFileSchema,
 } from "./types/tools.js";
 
 // 1. 初始化环境变量配置
@@ -52,6 +78,10 @@ export * from "./security/index.js";
 export * from "./services/probe-service.js";
 export * from "./services/bucket-service.js";
 export * from "./services/object-service.js";
+export * from "./services/transfer-service.js";
+export * from "./services/presign-service.js";
+export * from "./services/batch-service.js";
+export * from "./services/tag-service.js";
 
 /**
  * 通用工具执行函数包装器 (统一错误捕获与响应格式化，消除重复样板代码)
@@ -102,6 +132,7 @@ export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S
 
   const client = customClient ?? getS3Client(config);
   const readOnlyGuard = new ReadOnlyGuard(config.readOnly);
+  const sandboxGuard = new SandboxGuard(config.allowedLocalDir);
   const contentTruncator = new ContentTruncator({ maxBytes: config.maxReadBytes });
 
   // -------------------------------------------------------------
@@ -213,6 +244,137 @@ export function createMCPServer(config: AppConfig = parseEnv(), customClient?: S
       wrapToolHandler(async (args) =>
         readObjectRange(client, args, config.defaultBucket, contentTruncator)
       )
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 套件 4: 双向流式传输与预签名直链 (put_object_text, upload_file, download_file, get_presigned_url)
+  // -------------------------------------------------------------
+  if (readOnlyGuard.isToolAllowed("put_object_text")) {
+    server.tool(
+      "put_object_text",
+      "文本直接写入或覆盖对象",
+      PutObjectTextSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("put_object_text");
+        return putObjectText(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("upload_file")) {
+    server.tool(
+      "upload_file",
+      "本地文件流式上传至 S3（受本地工作区沙箱严格约束保护）",
+      UploadFileSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("upload_file");
+        return uploadFile(client, args, sandboxGuard, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("download_file")) {
+    server.tool(
+      "download_file",
+      "S3 对象流式保存为本地文件（受本地工作区沙箱保护）",
+      DownloadFileSchema.shape,
+      wrapToolHandler(async (args) => downloadFile(client, args, sandboxGuard, config.defaultBucket))
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("get_presigned_url")) {
+    server.tool(
+      "get_presigned_url",
+      "生成带有时效的预签名 HTTP(S) 直链（支持 GET 下载与 PUT 上传）",
+      GetPresignedUrlSchema.shape,
+      wrapToolHandler(async (args) =>
+        getPresignedUrl(client, args, readOnlyGuard, config.defaultBucket, config.presignedExpires)
+      )
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 套件 5: 批处理与标签治理 (copy_object, move_object, delete_object, delete_objects_batch, delete_objects_by_prefix, get_object_tags, set_object_tags)
+  // -------------------------------------------------------------
+  if (readOnlyGuard.isToolAllowed("copy_object")) {
+    server.tool(
+      "copy_object",
+      "同桶或跨桶对象复制",
+      CopyObjectSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("copy_object");
+        return copyObject(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("move_object")) {
+    server.tool(
+      "move_object",
+      "原子化移动与重命名对象（复制成功后自动删除源对象）",
+      MoveObjectSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("move_object");
+        return moveObject(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("delete_object")) {
+    server.tool(
+      "delete_object",
+      "删除指定的单个对象",
+      DeleteObjectSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("delete_object");
+        return deleteObject(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("delete_objects_batch")) {
+    server.tool(
+      "delete_objects_batch",
+      "批量删除指定的多个对象键列表（单批上限 1000 个对象）",
+      DeleteObjectsBatchSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("delete_objects_batch");
+        return deleteObjectsBatch(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("delete_objects_by_prefix")) {
+    server.tool(
+      "delete_objects_by_prefix",
+      "递归清理虚拟子目录树，内置三重防灾熔断守卫",
+      DeleteObjectsByPrefixSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("delete_objects_by_prefix");
+        return deleteObjectsByPrefix(client, args, config.defaultBucket);
+      })
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("get_object_tags")) {
+    server.tool(
+      "get_object_tags",
+      "查询对象关联的 Key-Value 标签字典",
+      GetObjectTagsSchema.shape,
+      wrapToolHandler(async (args) => getObjectTags(client, args, config.defaultBucket))
+    );
+  }
+
+  if (readOnlyGuard.isToolAllowed("set_object_tags")) {
+    server.tool(
+      "set_object_tags",
+      "写入或全量覆盖对象业务标签",
+      SetObjectTagsSchema.shape,
+      wrapToolHandler(async (args) => {
+        readOnlyGuard.assertToolAllowed("set_object_tags");
+        return setObjectTags(client, args, config.defaultBucket);
+      })
     );
   }
 
