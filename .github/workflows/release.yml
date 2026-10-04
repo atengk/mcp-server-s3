@@ -27,7 +27,7 @@ jobs:
       - name: 安装 pnpm 包管理器
         uses: pnpm/action-setup@v3
         with:
-          version: latest
+          version: 9
 
       - name: 配置 Node.js 运行环境
         uses: actions/setup-node@v4
