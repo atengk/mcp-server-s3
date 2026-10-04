@@ -121,7 +121,7 @@ function wrapToolHandler<T>(handler: (args: T) => Promise<unknown>) {
   };
 }
 
-export const SERVER_VERSION = "1.0.1";
+export const SERVER_VERSION = "1.1.0";
 
 /**
  * 组装并配置 MCP Server 实例
