@@ -1,0 +1,64 @@
+{
+  "name": "@atengk/mcp-server-s3",
+  "version": "1.0.0",
+  "description": "基于标准 S3 协议深度连接并管理兼容对象存储（MinIO、AWS S3、阿里云 OSS、Cloudflare R2、腾讯云 COS 等）的 Model Context Protocol (MCP) 服务",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atengk/mcp-server-s3.git"
+  },
+  "homepage": "https://github.com/atengk/mcp-server-s3#readme",
+  "bugs": {
+    "url": "https://github.com/atengk/mcp-server-s3/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "mcp-server-s3": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "s3",
+    "minio",
+    "aws-s3",
+    "oss",
+    "cloudflare-r2",
+    "cos",
+    "object-storage",
+    "ai-agent"
+  ],
+  "author": "Ateng",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0",
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "aws-sdk-client-mock": "^4.1.0",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
