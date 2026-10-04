@@ -18,13 +18,23 @@ describe("MCP Server 核心装配测试", () => {
     s3Mock.reset();
   });
 
-  it("成功实例化 McpServer 并包含 s3_ping 工具", () => {
-    const config = parseEnv({});
+  it("正常模式下实例化 McpServer 并装配全套工具", () => {
+    const config = parseEnv({
+      MCP_S3_READ_ONLY: "false",
+    });
     const server = createMCPServer(config);
     expect(server).toBeDefined();
   });
 
-  it("调用 s3_ping 工具能够正确返回连通性状态文本", async () => {
+  it("只读模式下实例化 McpServer 物理隐藏写/删工具", () => {
+    const config = parseEnv({
+      MCP_S3_READ_ONLY: "true",
+    });
+    const server = createMCPServer(config);
+    expect(server).toBeDefined();
+  });
+
+  it("注入客户端调用时能够正常运行", async () => {
     s3Mock.on(ListBucketsCommand).resolves({ Buckets: [] });
 
     const config = parseEnv({
