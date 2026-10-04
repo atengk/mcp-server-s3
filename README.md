@@ -480,6 +480,7 @@ src/
   - [ADR-0004: 作用域包命名、Provenance 软件供应链溯源与极简发版体系](docs/adr/0004-distribution-and-registry-strategy.md)
   - [ADR-0005: 轻量连通性自省探针 s3_ping 与云原生多阶段容器化](docs/adr/0005-connectivity-probe-and-containerization.md)
   - [ADR-0006: HTTP SSE 访问控制、透明分段上传与纯文本深度探测](docs/adr/0006-sse-security-multipart-upload-and-content-probing.md)
+  - [ADR-0007: 开源工程化模板合流、自动化发版与 CI/CD 规范](docs/adr/0007-oss-template-and-release-pipeline.md)
 
 ---
 

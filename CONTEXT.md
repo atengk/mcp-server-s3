@@ -98,3 +98,17 @@ _Avoid_: Chunked Transfer (分块传输), Split File (文件切分), File Slice
 在 `sse` 传输模式下，通过请求头 `Authorization: Bearer <token>` 或备用 URL 查询参数验证客户端合法性并保护端点免受非授权调用的安全访问门禁机制。
 _Avoid_: API Secret, Password Check, Login Key
 
+### 流水线与供应链工程 (Pipeline & Software Supply Chain)
+
+**Semantic Changelog (语义化变更日志)**:
+基于 Conventional Commits 规范，由自动化解析引擎（如 git-cliff）按特性、修复、重构等预设分组自动提取与生成的结构化发布说明。
+_Avoid_: Commit Log (提交记录), Release Summary (发布总结), Manual Notes
+
+**Provenance Attestation (软件供应链溯源凭据)**:
+利用 CI/CD 原生 OIDC 机制签署的不可篡改构建与发布签名（如 npm `--provenance`），提供软件来源防伪与供应链安全审计保障。
+_Avoid_: Build Certificate (构建证书), Signature File (签名文件)
+
+**Conventional PR (规范化拉取请求)**:
+标题与提交信息严格遵循 `<type>(<scope>): <subject>` 契约的拉取请求，为版本号演进与自动化发布日志生成提供权威数据源。
+_Avoid_: Standard PR, Formatted Merge
+

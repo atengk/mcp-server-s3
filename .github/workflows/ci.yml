@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pr-title:
+    name: 校验 PR 标题规范
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: read
+    steps:
+      - name: 校验 PR 标题符合 Conventional Commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+
+  build-and-test:
+    name: 构建与质量门禁测试
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm 包管理器
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - name: 配置 Node.js 运行环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: 完整安装项目依赖
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: 执行严格类型检查 (Typecheck)
+        run: pnpm typecheck
+
+      - name: 运行全量单元测试与安全门禁 (Tests)
+        run: pnpm test
+
+      - name: 执行生产编译打包 (Build)
+        run: pnpm build
