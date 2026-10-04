@@ -13,8 +13,7 @@
   - **工作区沙箱隔离 (`Sandbox Guard`)**：基于 `MCP_S3_ALLOWED_LOCAL_DIR` 严格校验本地路径，强力阻断路径遍历逃逸（`../`）与宿主机敏感文件泄露；
   - **前缀删除三重防灾 (`Prefix Deletion Guard`)**：递归前缀清理强制禁止根路径、强制显式布尔确认参数、单批次严格上限 1000 个对象；
   - **文本直读智能截断 (`Content Truncator`)**：单次文本直读严格限制 256KB 阈值，超量注入截断警示，二进制文件智能拦截引导。决策背景见 [ADR-0002](docs/adr/0002-tiered-toolsets-and-safety-guards.md)。
-- **毫秒级自省探针 (`s3_ping`)**：向底层发送极轻量请求，快速诊断端点连通性、当前生效 Region、脱敏 AK 及网络往返 RTT 时延。决策背景见 [ADR-0005](docs/adr/0005-connectivity-probe-and-containerization.md)。
-- **极简自动化发布体系**：集成 GitHub Actions，利用 GitHub OIDC 原生签发 `--provenance` 软件供应链溯源防伪凭证，由 `CHANGELOG.md` 权威驱动发布 GitHub Releases。决策背景见 [ADR-0004](docs/adr/0004-distribution-and-registry-strategy.md)。
+- **极简自动化发布体系**：集成 GitHub Actions，利用 GitHub OIDC 原生签发 `--provenance` 软件供应链溯源防伪凭证，由 Conventional Commits 规范与 `.cliff.toml` 全自动提取日志并发布 GitHub Releases 与 GHCR 镜像。决策背景见 [ADR-0004](docs/adr/0004-distribution-and-registry-strategy.md) 与 [ADR-0007](docs/adr/0007-oss-template-and-release-pipeline.md)。
 
 ## 2. 统一领域术语约束 (Ubiquitous Language)
 

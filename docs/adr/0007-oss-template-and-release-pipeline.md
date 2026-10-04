@@ -25,7 +25,7 @@
    - 针对当前项目技术栈（Node.js 20 + pnpm）激活全量质量门禁：自动执行依赖锁定安装、类型检查 (`pnpm typecheck`)、单元测试 (`pnpm test`) 及单文件打包 (`pnpm build`)。
 
 3. **双轨发版流水线与 git-cliff 自动化变更日志 (`release.yml`)**：
-   - **自动化 Release Notes**：引入 `.cliff.toml` 配置文件，在推送语义化 Tag（`v*`）时通过 `git-cliff-action` 自动解析提交历史，分类生成 Markdown 格式的发布说明；
+   - **完全自动化 Release Notes**：引入 `.cliff.toml` 配置文件，在推送语义化 Tag（`v*`）时通过 `git-cliff-action` 自动解析提交历史，分类生成 Markdown 格式的发布说明。**此方案彻底替代 ADR-0004 中手动维护 `CHANGELOG.md` 并作为发版正文的设计，代码库物理删除手写静态文件，以 GitHub Releases 作为唯一权威发布日志展示**；
    - **软件供应链防伪发版 (NPM + SLSA Provenance)**：在质量门禁全部通过后，读取 GitHub Secrets 中的 `NPM_TOKEN`，并通过 GitHub OIDC 签发 `--provenance` 防伪证书，完成 `@atengk/mcp-server-s3` 官方注册表发布；
    - **多架构容器镜像分发 (GHCR)**：利用内置 `GITHUB_TOKEN`，通过 Docker Buildx 并发编译 `linux/amd64` 与 `linux/arm64` 双架构轻量容器镜像，自动推送至 `ghcr.io/atengk/mcp-server-s3`，提供免安装一键运行体验。
 

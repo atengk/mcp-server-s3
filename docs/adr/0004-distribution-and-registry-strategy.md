@@ -1,5 +1,7 @@
 # 0004. 作用域包命名、Provenance 软件供应链溯源与极简发版体系
 
+> ⚠️ **演进说明**：关于发版日志生成机制，已在 [ADR-0007](0007-oss-template-and-release-pipeline.md) 中全面演进为由 Conventional Commits 与 `.cliff.toml` 自动化提取，彻底物理移除了手工维护的 `CHANGELOG.md`。
+
 ## 背景与决策 (Context & Decision)
 
 为了使全球开发者和各类 AI 宿主客户端能够无缝发现、一键免安装运行并安全接入 `mcp-server-s3`，我们需要确立生产发布渠道与发版质量标准。未经 Scope 的包名存在被抢注与供应链仿冒的重大风险，且发版过程必须具备防伪凭证。
