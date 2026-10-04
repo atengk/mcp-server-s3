@@ -7,7 +7,7 @@
 我们决定采纳以下核心探针与容器化决策：
 1. **轻量连通性探针工具 `s3_ping`**：提供无入参的极速诊断工具，底层向目标存储发送轻量校验请求，以毫秒级时延返回当前生效的 Endpoint、脱敏 AccessKey、Region、网络往返 RTT 及存活状态；
 2. **多阶段构建生产级 Dockerfile**：基于 `node:20-alpine` 实施多阶段构建（Builder 负责 pnpm 编译，Runner 仅包含生产单文件），切换内置非 root 用户 `node` 运行，暴露 `/health` 健康检查端点；
-3. **开箱即用的 docker-compose.yaml**：一键编排并挂载 MinIO 与 `mcp-server-s3`，内置预建 Bucket 与开箱即用鉴权凭证，方便本地一键启动测试或私有化部署。
+3. **开箱即用的 docker-compose.yaml 与 GHCR 镜像消费**：一键编排并挂载 MinIO 与 `mcp-server-s3`。随着 CI/CD 自动发布 GHCR 多架构镜像（见 [ADR-0007](0007-oss-template-and-release-pipeline.md)），Compose 编排文件默认直接消费官方预编译镜像 `ghcr.io/atengk/mcp-server-s3:${MCP_S3_IMAGE_TAG:-latest}`，实现脱离源码的单文件秒级拉起，同时保留本地 `build` 注释供二开切换。
 
 ## 权衡考量 (Considered Options)
 

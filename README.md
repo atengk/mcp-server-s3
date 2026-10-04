@@ -390,13 +390,17 @@ npx -y @atengk/mcp-server-s3 --transport sse --port 8000 --api-key secret-token-
 
 ### 1. 使用 Docker Compose 一键启动微服务集群
 
+`docker-compose.yaml` 默认直接拉取 GitHub Packages (GHCR) 发布的预编译多架构镜像（`ghcr.io/atengk/mcp-server-s3:latest`），**无需本地安装 Node/pnpm 或进行耗时编译**，甚至仅需单独下载单份 `docker-compose.yaml` 即可秒级拉起完整的 MinIO + S3 MCP 集群：
+
 ```bash
-# 后台拉起微服务集群 (MinIO + S3 MCP)
+# 后台拉起微服务集群 (MinIO + 预编译 S3 MCP)
 docker compose up -d
 
 # 检查服务就绪探针 (健康检查公开免鉴权)
 curl http://localhost:8000/health
 ```
+
+> 💡 **进阶提示**：如需锁定特定版本，可运行 `MCP_S3_IMAGE_TAG=v1.0.1 docker compose up -d`；如需基于本地源码二次开发，仅需按 `docker-compose.yaml` 中提示解除 `build` 注释即可。
 
 ### 2. 远程 HTTP SSE 鉴权接入规范
 

@@ -41,9 +41,13 @@ services:
   # Model Context Protocol S3 服务端 (常驻 HTTP SSE 传输模式)
   # ----------------------------------------------------------------------------
   mcp-server-s3:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # 默认直接消费 GitHub Packages (GHCR) 预编译的多架构镜像 (amd64 / arm64)
+    # 可通过环境变量 MCP_S3_IMAGE_TAG 动态锁定特定版本 (如 MCP_S3_IMAGE_TAG=v1.0.1)
+    image: ghcr.io/atengk/mcp-server-s3:${MCP_S3_IMAGE_TAG:-latest}
+    # 如需基于本地源码进行二次开发，注释上方 image 并解除下方 build 块注释即可:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: mcp-server-s3
     restart: unless-stopped
     depends_on:
